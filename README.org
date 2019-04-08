@@ -1,0 +1,60 @@
+* Transformers.jl
+Julia implementation of NLP models, that based on google [[https://arxiv.org/abs/1706.03762][transformer]], with [[https://github.com/FluxML/Flux.jl][Flux.jl]].
+For using the model, see =example= folder.
+
+* Installation
+In the Julia REPL:
+#+BEGIN_EXAMPLE
+]add Transformers
+
+#Currently the Dataset need the HTTP#master to download
+]add HTTP#master
+#+END_EXAMPLE
+
+For using GPU, install & build:
+#+BEGIN_EXAMPLE
+]add CuArrays
+
+]build 
+
+julia> using CuArrays
+
+julia> using Transformers
+
+#run the model below
+.
+.
+.
+
+#+END_EXAMPLE
+
+* implemented model
++ [[https://arxiv.org/abs/1706.03762][Attention is all you need]]
++ [[https://s3-us-west-2.amazonaws.com/openai-assets/research-covers/language-unsupervised/language_understanding_paper.pdf][Improving Language Understanding by Generative Pre-Training]]
+
+* Issue
+Currently the code is really ugly, need refactor, test and docs.
+
+* Roadmap
+  - [ ] write docs
+  - [ ] write test
+  - [ ] refactor code
+  - [60%] better embedding functions
+    - [X] gather function forward
+    - [X] gather function backward (might be better)
+    - [X] OneHotArray
+    - [ ] more util functions
+    - [ ] easy gpu data
+  - [X] lazy CuArrays loading
+  - [ ] using HTTP to handle dataset download (need HTTP.jl update)
+  - [ ] optimize performance
+  - [ ] text related util functions
+  - [ ] better dataset API
+  - [ ] more datasets
+  - [75%] openai gpt model
+    - [X] model implementation
+    - [X] loading pretrain
+    - [X] model example
+    - [ ] more util functions
+  - [ ] openai gpt-2 model
+  - [ ] google bert model
