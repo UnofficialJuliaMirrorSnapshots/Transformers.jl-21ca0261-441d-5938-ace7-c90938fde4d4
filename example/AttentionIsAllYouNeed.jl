@@ -167,7 +167,7 @@ const decoder = gpu(Stack(
     (e, pe) -> e .+ pe,
     Dropout(0.1),
     [TransformerDecoder(512, 8, 64, 2048) for i = 1:N]...,
-    Sequence(Dense(512, length(labels)), logsoftmax)
+    Positionwise(Dense(512, length(labels)), logsoftmax)
 ))
 
 const ps = params(embed, encoder, decoder)
@@ -199,11 +199,15 @@ function loss(src, trg, src_mask, trg_mask)
     #label smoothing
     label = smooth(lab)[:, 2:end, :]
 
-    loss = logkldivergence(label, dec[:, 1:end-1, :], trg_mask[:, 1:end-1, :])
+    if mask == nothing
+        loss = logkldivergence(label, dec[:, 1:end-1, :])
+    else
+        loss = logkldivergence(label, dec[:, 1:end-1, :], trg_mask[:, 1:end-1, :])
+    end
 end
 
 function translate(x)
-    ix = todevice(embed.Vocab(mkline(x))
+    ix = todevice(embed.Vocab(mkline(x)))
     seq = [startsym]
 
     src = embedding(ix)

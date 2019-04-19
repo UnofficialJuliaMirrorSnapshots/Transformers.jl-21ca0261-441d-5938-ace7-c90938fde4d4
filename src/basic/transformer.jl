@@ -1,19 +1,21 @@
 using Flux
 using Flux: @treelike
 
-struct Positionwise
+struct PwFFN
     din::Dense
     dout::Dense
 end
 
-@treelike Positionwise
+@treelike PwFFN
 
-Positionwise(size::Int, h::Int, act = relu) = Positionwise(
+
+"just a wrapper for two dense layer."
+PwFFN(size::Int, h::Int, act = relu) = PwFFN(
     Dense(size, h, act),
     Dense(h, size)
 )
 
-function (pw::Positionwise)(x)::AbstractMatrix
+function (pw::PwFFN)(x)::AbstractMatrix
     # size(x) == (dims, seq_len)
     pw.dout(pw.din(x))
 end
@@ -21,13 +23,24 @@ end
 struct Transformer
     mh::MultiheadAttention
     mhn::LayerNorm
-    pw::Positionwise
+    pw::PwFFN
     pwn::LayerNorm
     drop::Dropout
 end
 
 @treelike Transformer
 
+
+"""
+    Transformer(size::Int, head::Int, ps::Int; future::Bool = true, act = relu, pdrop = 0.1)
+    Transformer(size::Int, head::Int, hs::Int, ps::Int; future::Bool = true, act = relu, pdrop = 0.1)
+
+Transformer layer.
+
+`size` is the input size. if `hs` is not specify, use `div(size, head)` as the hidden size of multi-head attention. 
+`ps` is the hidden size & `act` is the activation function of the positionwise feedforward layer. 
+When `future` is `false`, the k-th token can't see the j-th tokens where j > k. `pdrop` is the dropout rate.
+"""
 function Transformer(size::Int, head::Int, ps::Int; future::Bool = true, act = relu, pdrop = 0.1)
     rem(size, head) != 0 && error("size not divisible by head")
     Transformer(size, head, div(size, head), ps;future=future, act=act, pdrop=pdrop)
@@ -36,7 +49,7 @@ end
 Transformer(size::Int, head::Int, hs::Int, ps::Int; future::Bool = true, act = relu, pdrop = 0.1) = Transformer(
     MultiheadAttention(head, size, hs, size; future=future, pdrop=pdrop),
     LayerNorm(size),
-    Positionwise(size, ps, act),
+    PwFFN(size, ps, act),
     LayerNorm(size),
     Dropout(pdrop),
 )
@@ -81,19 +94,34 @@ struct TransformerDecoder
     mhn::LayerNorm
     imh::MultiheadAttention
     imhn::LayerNorm
-    pw::Positionwise
+    pw::PwFFN
     pwn::LayerNorm
     drop::Dropout
 end
 
 @treelike TransformerDecoder
 
-TransformerDecoder(size, head, hs, ps; act = relu, pdrop = 0.1) = TransformerDecoder(
+"""
+    TransformerDecoder(size::Int, head::Int, ps::Int; act = relu, pdrop = 0.1)
+    TransformerDecoder(size::Int, head::Int, hs::Int, ps::Int; act = relu, pdrop = 0.1)
+
+TransformerDecoder layer. Decode the value from a Encoder.
+
+`size` is the input size. if `hs` is not specify, use `div(size, head)` as the hidden size of multi-head attention. 
+`ps` is the hidden size & `act` is the activation function of the positionwise feedforward layer. 
+`pdrop` is the dropout rate.
+"""
+function TransformerDecoder(size::Int, head::Int, ps::Int; act = relu, pdrop = 0.1)
+    rem(size, head) != 0 && error("size not divisible by head")
+    TransformerDecoder(size, head, div(size, head), ps; act=act, pdrop=pdrop)
+end
+
+TransformerDecoder(size::Int, head::Int, hs::Int, ps::Int; act = relu, pdrop = 0.1) = TransformerDecoder(
     MultiheadAttention(head, size, hs, size; future=false, pdrop=pdrop),
     LayerNorm(size),
     MultiheadAttention(head, size, hs, size; future=true, pdrop=pdrop),
     LayerNorm(size),
-    Positionwise(size, ps, act),
+    PwFFN(size, ps, act),
     LayerNorm(size),
     Dropout(pdrop),
 )
