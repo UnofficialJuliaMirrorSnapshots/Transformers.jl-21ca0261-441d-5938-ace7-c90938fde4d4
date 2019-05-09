@@ -1,0 +1,27 @@
+language: julia
+
+os:
+  - linux
+
+julia:
+  - 1.0
+  - 1.1
+  - nightly
+
+matrix:
+  allow_failures:
+    - julia: nightly
+
+
+branch:
+  only:
+    - master
+
+after_success:
+  - julia -e 'using Pkg; cd(Pkg.dir("Transformers")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
+
+notifications:
+  email: false
+
+git:
+  depth: 99999999
