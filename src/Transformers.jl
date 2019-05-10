@@ -5,7 +5,7 @@ using Requires
 using Requires: @init
 
 export Transformer, TransformerDecoder
-export Stack, stack, @nntopo_str, @nntopo, show_stackfunc
+export Stack, @nntopo_str, @nntopo
 
 export dataset, datafile, get_batch, get_vocab
 
@@ -24,25 +24,24 @@ todevice(x, xs...) = (x, xs...)
 
     "move data to device, basically = `CuArrays.cu` except `AbstractArray{Int}` become `CuArray{Int}`"
     todevice(x, xs...) = (todevice(x), todevice.(xs)...)
-    todevice(x::AbstractArray{Int}) = CuArray(x)
+    todevice(x::AbstractArray{Int}) = CuArrays.CuArray(x)
     todevice(x) = CuArrays.cu(x)
 end
 
 #implement batchmul for flux
 include("./fix/batchedmul.jl")
 
-#implement of gelu for gpu
-include("./fix/gelu.jl")
-
 #dropout noise shape impl
 include("./fix/dropout.jl")
 
 include("./basic/Basic.jl")
+include("./stacks/Stacks.jl")
 include("./datasets/Datasets.jl")
 
 include("./gpt/GenerativePreTrain.jl")
 
 using .Basic
+using .Stacks
 using .Datasets
 using .GenerativePreTrain
 

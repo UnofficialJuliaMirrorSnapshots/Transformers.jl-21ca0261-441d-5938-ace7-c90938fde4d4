@@ -4,6 +4,7 @@
 # Transformers.jl
 
 [![Build Status](https://travis-ci.com/chengchingwen/Transformers.jl.svg?branch=master)](https://travis-ci.com/chengchingwen/Transformers.jl)
+[![Build status](https://ci.appveyor.com/api/projects/status/ns0x37a7sykjuhw0?svg=true)](https://ci.appveyor.com/project/chengchingwen/transformers-jl)
 [![codecov](https://codecov.io/gh/chengchingwen/Transformers.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/chengchingwen/Transformers.jl)
 
 Julia implementation of NLP models, that based on google [transformer](https://arxiv.org/abs/1706.03762), with [Flux.jl](https://github.com/FluxML/Flux.jl).
@@ -22,8 +23,7 @@ For using the model, see `example` folder.
     3.  [The Stack NNTopo DSL](#orga82ed26)
         1.  [NNTopo Syntax](#org2f49cf2)
         2.  [Stack](#orgdbe1060)
-6.  [Issue](#org40d94bc)
-7.  [Roadmap](#orge253f99)
+6.  [Roadmap](#orge253f99)
 
 
 <a id="org7cd262e"></a>
@@ -326,14 +326,6 @@ Positionwise(Dense(512, length(labels)), logsoftmax)
 )
 ```
 
-<a id="org40d94bc"></a>
-
-# Issue
-
-Currently the code only work without problems on linux. For Mac/Windows, it will show a large amount of warning. Unfortunately, I haven't figure out what 
-is wrong and I don't have a Mac/Windows machine to test, so if you happend to know how to handle it, Please fire an Issue/PR.
-
-
 
 <a id="orge253f99"></a>
 
@@ -345,13 +337,13 @@ is wrong and I don't have a Mac/Windows machine to test, so if you happend to kn
     -   [ ] make docs site
 -   [X] write test
 -   [ ] refactor code
--   <code>[50%]</code> better embedding functions
+-   <code>[83%]</code> better embedding functions
     -   [X] gather function forward
     -   [X] gather function backward (might be better)
     -   [X] OneHotArray
     -   [ ] more util functions
-    -   [ ] easy gpu data
-    -   [ ] remove Vocabulary
+    -   [X] easy gpu data
+    -   [X] remove Vocabulary
 -   [X] lazy CuArrays loading
 -   [ ] using HTTP to handle dataset download (need HTTP.jl update)
 -   [ ] optimize performance
@@ -367,3 +359,4 @@ is wrong and I don't have a Mac/Windows machine to test, so if you happend to kn
 -   [ ] google bert model
 -   [ ] TPU support
 -   [ ] openai sparse transformer
+-   [ ] benchmarks
