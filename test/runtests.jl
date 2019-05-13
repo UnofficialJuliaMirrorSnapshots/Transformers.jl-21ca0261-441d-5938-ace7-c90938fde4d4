@@ -2,10 +2,13 @@ using Transformers
 using Transformers.Basic
 using Test
 
+import Flux
+
 const tests = [
     "transformer",
     "nntopo",
     "embed",
+    "basic",
 ]
 
 if v"1.0.0" <= VERSION  <= v"1.1.0"
