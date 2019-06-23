@@ -4,34 +4,64 @@ abstract type AbstractBroadcastEmbed{F} <: AbstractEmbed{F} end
 Base.eltype(::AbstractEmbed{F}) where F = F
 _getF(::Type{<:AbstractEmbed{F}}) where F = F
 
-struct CompositeEmbeddings{F, T <: NamedTuple, T2 <: NamedTuple} <: AbstractEmbed{F}
+struct CompositeEmbedding{F, T <: NamedTuple, T2 <: NamedTuple, P} <: AbstractEmbed{F}
     embeddings::T
     aggregator::T2
-    CompositeEmbeddings(es::NamedTuple, as::NamedTuple) = new{_getF(eltype(es)), typeof(es), typeof(as)}(es, as)
+    postprocessor::P
+    CompositeEmbedding(es::NamedTuple, as::NamedTuple, post) = new{_getF(eltype(es)), typeof(es), typeof(as), typeof(post)}(es, as, post)
 end
 
-function CompositeEmbeddings(;es...)
-    emb = map(x-> x isa Tuple ? x[1] : x, es.data)
-    agg = map(x-> x isa Tuple ? x[2] : +, es.data)
-    CompositeEmbeddings(emb, agg)
+function CompositeEmbedding(;es...)
+    if haskey(es.data, :postprocessor)
+        post = es.data[:postprocessor]
+        eas = Base.tail(merge((postprocessor = identity,), es.data))
+    else
+        post = identity
+        eas = es.data
+    end
+
+    emb = map(x-> x isa Tuple ? x[1] : x, eas)
+    agg = map(x-> x isa Tuple ? x[2] : +, eas)
+    CompositeEmbedding(emb, agg, post)
 end
-function Base.show(io::IO, e::CompositeEmbeddings)
-    print(io, "CompositeEmbeddings")
-    print(io, e.embeddings)
+
+Flux.children(ce::CompositeEmbedding) = tuple(values(ce.embeddings)..., ce.postprocessor)
+Flux.mapchildren(f, ce::CompositeEmbedding) = CompositeEmbedding(map(e->f(e), ce.embeddings), ce.aggregator, f(ce.postprocessor))
+
+function Base.show(io::IO, e::CompositeEmbedding)
+    names = keys(e.embeddings)
+    firstname = first(names)
+
+    print(io, "CompositeEmbedding(")
+    print(io, firstname)
+    print(io, " = ")
+    print(io, e.embeddings[firstname])
+
+    for name ∈ Base.tail(names)
+        print(io, ", ")
+        print(io, name)
+        print(io, " = ")
+        print(io, e.embeddings[name])
+    end
+
+    if e.postprocessor !== identity
+        print(io, ", postprocessor = ")
+        print(io, e.postprocessor)
+    end
+
+    print(io, ")")
 end
 
 get_value(e::AbstractEmbed, name::Symbol, xs::NamedTuple) = e(xs[name])
+_repeatdims(bs, vs) = ntuple(i -> i > length(vs) ? bs[i] : 1, length(vs))
 
-_repeatdims(bs, vs) = map(x-> x[1] > length(vs) ? x[2] : 1, enumerate(bs))
+@inline aggregate(e::E, f::F, base::A, value::A2) where {F, T, A <: AbstractArray{T}, A2 <: AbstractArray{T}, E <: AbstractEmbed{T}} = f(base, value)
+@inline aggregate(e::Eb, f::F, base::A, value::A2) where {F, T, A <: AbstractArray{T}, A2 <: AbstractArray{T}, Eb <: AbstractBroadcastEmbed{T}} = f.(base, value)
+@inline aggregate(e::Eb, f::typeof(vcat), base::A, value::A2) where {T, A <: AbstractArray{T}, A2 <: AbstractArray{T}, Eb <: AbstractBroadcastEmbed{T}} = vcat(base, repeat(value, _repeatdims(size(base), size(value))...))
+@inline aggregate(e::Eb, f::typeof(hcat), base::A, value::A2) where {T, A <: AbstractArray{T}, A2 <: AbstractArray{T}, Eb <: AbstractBroadcastEmbed{T}} = hcat(base, repeat(value, _repeatdims(size(base), size(value))...))
 
-aggregate(e::AbstractEmbed{T}, f::F, base::A, value::A) where {F, T, A <: AbstractArray{T}} = f(base, value)
-aggregate(e::AbstractBroadcastEmbed{T}, f::F, base::A, value::A2) where {F, T, A <: AbstractArray{T}, A2 <: AbstractArray{T}} = f.(base, value)
-aggregate(e::AbstractBroadcastEmbed{T}, f::typeof(vcat), base::A, value::A2) where {T, A <: AbstractArray{T}, A2 <: AbstractArray{T}} = cat(base, repeat(value, _repeatdims(size(base), size(value))...); dims=1)
-aggregate(e::AbstractBroadcastEmbed{T}, f::typeof(hcat), base::A, value::A2) where {T, A <: AbstractArray{T}, A2 <: AbstractArray{T}} = cat(base, repeat(value, _repeatdims(size(base), size(value))...); dims=2)
-
-
-(ce::CompositeEmbeddings)(;xs...) = ce(xs.data)
-function (ce::CompositeEmbeddings{F})(xs::NamedTuple) where F
+(ce::CompositeEmbedding)(;xs...) = ce(xs.data)
+function (ce::CompositeEmbedding{F, T1, T2, P})(xs::NamedTuple) where {F, T1, T2, P}
     names = keys(ce.embeddings)
     firstname = first(names)
     init = get_value(ce.embeddings[firstname], firstname, xs)
@@ -43,5 +73,9 @@ function (ce::CompositeEmbeddings{F})(xs::NamedTuple) where F
         init = aggregate(emb, agg, init, value)
     end
 
-    init::TrackedArray{F}
+    if P === typeof(identity)
+        init
+    else
+        ce.postprocessor(init)
+    end
 end

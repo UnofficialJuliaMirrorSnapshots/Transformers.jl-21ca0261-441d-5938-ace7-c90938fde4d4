@@ -6,7 +6,7 @@ using Requires: @init
 
 using ..Transformers: Abstract3DTensor, Container, batchedmul
 
-export CompositeEmbeddings
+export CompositeEmbedding, TransformerModel
 export PositionEmbedding, Embed, getmask,
     Vocabulary, gather, encode, decode
 export OneHotArray, indices2onehot, onehot2indices,
@@ -22,5 +22,6 @@ include("./embeds/Embeds.jl")
 include("./mh_atten.jl")
 include("./transformer.jl")
 include("./loss.jl")
+include("./model.jl")
 
 end
