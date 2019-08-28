@@ -11,18 +11,16 @@ struct CompositeEmbedding{F, T <: NamedTuple, T2 <: NamedTuple, P} <: AbstractEm
     CompositeEmbedding(es::NamedTuple, as::NamedTuple, post) = new{_getF(eltype(es)), typeof(es), typeof(as), typeof(post)}(es, as, post)
 end
 
-function CompositeEmbedding(;es...)
-    if haskey(es.data, :postprocessor)
-        post = es.data[:postprocessor]
-        eas = Base.tail(merge((postprocessor = identity,), es.data))
-    else
-        post = identity
-        eas = es.data
-    end
+"""
+    CompositeEmbedding(;postprocessor=identity, es...)
 
-    emb = map(x-> x isa Tuple ? x[1] : x, eas)
-    agg = map(x-> x isa Tuple ? x[2] : +, eas)
-    CompositeEmbedding(emb, agg, post)
+composite several embedding into one embedding according the aggregate methods and apply `postprocessor` on it.
+"""
+function CompositeEmbedding(;postprocessor=identity, es...)
+  eas = es.data
+  emb = map(x-> x isa Tuple ? x[1] : x, eas)
+  agg = map(x-> x isa Tuple ? x[2] : +, eas)
+  CompositeEmbedding(emb, agg, postprocessor)
 end
 
 Flux.children(ce::CompositeEmbedding) = tuple(values(ce.embeddings)..., ce.postprocessor)

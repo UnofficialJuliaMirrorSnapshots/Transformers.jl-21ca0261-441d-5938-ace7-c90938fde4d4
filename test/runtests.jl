@@ -9,6 +9,9 @@ const tests = [
     "nntopo",
     "embed",
     "basic",
+    "gpt",
+    "bert",
+    "pretrain",
 ]
 
 if v"1.0.0" <= VERSION  <= v"1.1.0"

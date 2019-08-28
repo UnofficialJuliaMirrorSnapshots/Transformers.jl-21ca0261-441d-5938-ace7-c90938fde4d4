@@ -1,11 +1,9 @@
 using Flux: @treelike
+using MacroTools: @forward
 
 using ..Basic
 using ..Basic: onehot, AbstractTransformer
 using ..Stacks
-
-export Gpt, lmloss
-export load_gpt_pretrain
 
 struct Gpt <: AbstractTransformer
     ts::Stack
@@ -14,27 +12,34 @@ end
 
 @treelike Gpt
 
+@forward Gpt.ts Base.getindex, Base.length
+
 """
     Gpt(size::Int, head::Int, ps::Int, layer::Int;
-        max_len::Int = 512, trainable = true, act = gelu, pdrop = 0.1)
+        act = gelu, pdrop = 0.1, attn_pdrop = 0.1)
     Gpt(size::Int, head::Int, hs::Int, ps::Int, layer::Int;
-        max_len::Int = 512, trainable = true, act = gelu, pdrop = 0.1)
+        act = gelu, pdrop = 0.1, attn_pdrop = 0.1)
 
-the Generative Pretrain model.
+the Generative Pretrained Transformer(GPT) model.
+
+    (gpt::Gpt)(x::T, mask=nothing; all::Bool=false)
+
+eval the gpt layer on input `x`. If length `mask` is given (in shape (1, seq_len, batch_size)), mask the attention with `mask`. Moreover, set `all` to `true` to get all 
+outputs of each transformer layer.
 """
 function Gpt(size::Int, head::Int, ps::Int, layer::Int;
-             act = gelu, pdrop = 0.1)
+             act = gelu, pdrop = 0.1, attn_pdrop = 0.1)
     rem(size, head) != 0 && error("size not divisible by head")
-    Gpt(size, head, div(size, head), ps, layer; act=act, pdrop=pdrop)
+    Gpt(size, head, div(size, head), ps, layer; act=act, pdrop=pdrop, attn_pdrop=attn_pdrop)
 end
 
 function Gpt(size::Int, head::Int, hs::Int, ps::Int, layer::Int;
-             act = gelu, pdrop = 0.1)
+             act = gelu, pdrop = 0.1, attn_pdrop = 0.1)
     Gpt(
         Stack(
             @nntopo_str("x':x => $layer"),
             [
-                Transformer(size, head, hs, ps; future=false, act=act, pdrop=pdrop)
+                Transformer(size, head, hs, ps; future=false, act=act, pdrop=attn_pdrop)
                 for i = 1:layer
             ]...
         ),
@@ -42,7 +47,7 @@ function Gpt(size::Int, head::Int, hs::Int, ps::Int, layer::Int;
     )
 end
 
-function (gpt::Gpt)(x::T, mask=nothing; all::Bool=false)::T where T
+function (gpt::Gpt)(x::T, mask=nothing; all::Bool=false) where T
     e = gpt.drop(x)
     t, ts = gpt.ts(e)
     t = mask === nothing ? t : t .* mask
